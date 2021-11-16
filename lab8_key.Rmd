@@ -1,0 +1,115 @@
+---
+title: "Untitled"
+author: "Katherine Rosencrance"
+date: "11/16/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(here)
+library(tidyverse)
+library(modelsummary)
+library(corrplot)
+library(broom)
+```
+
+```{r}
+homes <- read_csv(here("data", "slo_homes.csv"))
+```
+
+### Create  a subset with four cities
+
+create subset that only contains obs where the city is 
+-san luis obispo
+-atascadero
+-arroyo grande
+-santa maria orcutt
+
+```{r}
+homes_subset <- homes %>% 
+  filter(City %in% c("San Luis Obispo", "Atascadero", "Arroyo Grande", "Santa Maria-Orcutt"))
+```
+
+### little exploration
+
+Task create a summary table that has mean and standard deviation of home price grouped by city and sale status
+
+```{r}
+homes_table <- homes_subset %>% 
+  group_by(City, Status) %>% 
+  summarize(mean_price = mean(Price),
+            sd_price = sd(Price))
+homes_table
+```
+Task explore relationship between sqaure footage and price
+
+```{r}
+homes_subset %>% 
+  ggplot(aes(x = SqFt, y = Price ))+
+  geom_point()+
+  geom_smooth(method = "lm")
+```
+use multiple linear regression to investigate realtionships between several predictor variables and home price
+
+create 2 diff permutations of this model
+
+1. price- city, bedrooms, bathrooms, sqft, and status (lm1)
+2. price- city, sqft, status (lm2)
+3. try another one (lm3)
+
+```{r}
+
+lm1 <-lm(Price ~ City + Bedrooms + Bathrooms + SqFt + Status, data = homes_subset)
+
+lm2 <- lm(Price ~ SqFt + City + Status, data = homes_subset)
+
+lm3 <- lm()
+
+## if i wanted San Luis Obispo to be the reference level: use fct_relevel to specify a new reference level
+
+  
+```
+
+
+## explore correlations beetween quantitative variables
+
+mask subset called homes_quant from homes subset that only contains variables from price- sqft
+
+```{r}
+homes_quant <- homes_subset %>% 
+  select(Price, Bedrooms, Bathrooms, SqFt)
+
+homes_cor <- cor(homes_quant)
+
+corrplot(homes_cor)
+```
+### COmpare AIC values
+
+```{r}
+AIC(lm1)
+AIC(lm2)
+```
+
+# lower aic indicates better
+### Use model summary to return multiple model outputs
+
+```{r}
+modelsummary(list(lm1, lm2))
+```
+
+### Check out diagnostic plots for lm1
+
+```{r}
+plot(lm1)
+```
+use broom::augment to return the predictions for existing obs
+
+```{r}
+home_predictions <- augment(lm1)
+
+ggplot(data = home_predictions, aes(x = .resid))+
+  geom_histogram()
+```
+
